@@ -22,6 +22,7 @@ const Header = ({
   textColor = colors.textWhite,
   rightComponent,
   style
+  
 }) => {
   return (
     <>
