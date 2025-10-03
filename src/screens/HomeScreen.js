@@ -544,7 +544,7 @@ const HomeScreen = ({ navigation }) => {
             <DateTimePicker
               value={tempDate}
               mode="date"
-              display="spinner"
+              display="inline"
               onChange={onDateChange}
               minimumDate={new Date()}
               style={styles.datePicker}
@@ -1046,6 +1046,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingHorizontal: 0,
   },
   datePickerHeaderCenter: {
     alignItems: 'center',
@@ -1066,7 +1067,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: `${colors.primary}15`,
     padding: 12,
-    marginHorizontal: 20,
+    marginHorizontal: 0,
     marginTop: 10,
     borderRadius: 8,
   },
@@ -1077,8 +1078,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   datePicker: {
-    height: 200,
+    height: 350,
     marginVertical: 20,
+    marginHorizontal: 0,
   },
   cancelButton: {
     fontSize: 16,

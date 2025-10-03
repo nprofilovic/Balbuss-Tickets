@@ -1,17 +1,44 @@
-// API Configuration
+// utils/constants.js - AŽURIRANO
+
+// ============================================
+// API Configuration - KRITIČNO: Promenite ovo!
+// ============================================
+
+// VAŠA WORDPRESS INSTALACIJA URL
+// Zamenite sa pravom WordPress URL adresom
+export const WORDPRESS_URL = 'https://balbuss.rs'; // <- PROMENITE OVO!
+
 export const API_CONFIG = {
-  BASE_URL: 'https://api.balbuss.rs',
+  // WordPress REST API endpoint
+  BASE_URL: `${WORDPRESS_URL}/wp-json`,
+  
   ENDPOINTS: {
-    AUTH: '/auth',
-    BUSES: '/buses',
-    ROUTES: '/routes',
-    BOOKINGS: '/bookings',
-    USERS: '/users',
-    CITIES: '/cities',
-    PAYMENTS: '/payments'
+    // Balbuss custom endpoints
+    BUSES: '/balbuss/v1/lines',
+    SEARCH: '/balbuss/v1/lines/search',
+    CITIES: '/balbuss/v1/cities',
+    BOOKINGS: '/balbuss/v1/bookings',
+    
+    // WooCommerce endpoints (ako koristite WooCommerce REST API)
+    WC_CART: '/wc/store/cart',
+    WC_CHECKOUT: '/wc/store/checkout',
+    WC_PRODUCTS: '/wc/v3/products',
+    WC_ORDERS: '/wc/v3/orders'
   },
-  TIMEOUT: 10000
+  
+  TIMEOUT: 30000, // 30 sekundi za WooCommerce checkout
+  
+  // Headers za autentikaciju
+  getHeaders: () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    // Ako imate API key, dodajte ovde:
+    // 'Authorization': 'Bearer YOUR_API_KEY'
+  })
 };
+
+// Za testiranje lokalnog development servera:
+// export const WORDPRESS_URL = 'http://192.168.1.100'; // Vaša lokalna IP adresa
 
 // App Configuration
 export const APP_CONFIG = {
@@ -80,6 +107,7 @@ export const SCREENS = {
   HOME: 'Home',
   SEARCH_RESULTS: 'SearchResults',
   BUS_DETAILS: 'BusDetails',
+  TICKET_DETAILS: 'TicketDetails',
   SEAT_SELECTION: 'SeatSelection',
   PASSENGER_INFO: 'PassengerInfo',
   PAYMENT: 'Payment',
@@ -102,18 +130,6 @@ export const DATE_FORMATS = {
 // Validation Rules
 export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE_REGEX: /^(\+381|0)[0-9]{8,9}$/,
-  MIN_PASSWORD_LENGTH: 6,
-  MAX_PASSENGERS: 9
-};
-
-// Error Messages
-export const ERROR_MESSAGES = {
-  NETWORK_ERROR: 'Greška u mreži. Proverite internet konekciju.',
-  INVALID_EMAIL: 'Unesite validnu email adresu.',
-  INVALID_PHONE: 'Unesite validan broj telefona.',
-  PASSWORD_TOO_SHORT: `Lozinka mora imati najmanje ${VALIDATION.MIN_PASSWORD_LENGTH} karaktera.`,
-  REQUIRED_FIELD: 'Ovo polje je obavezno.',
-  BOOKING_FAILED: 'Rezervacija nije uspešna. Pokušajte ponovo.',
-  PAYMENT_FAILED: 'Plaćanje nije uspešno. Pokušajte ponovo.'
+  PHONE_REGEX: /^[+]?[0-9]{9,15}$/,
+  MIN_PASSWORD_LENGTH: 6
 };

@@ -168,30 +168,20 @@ const TicketDetailsScreen = ({ route, navigation }) => {
       const response = await addToCart(bookingData);
 
       if (response.success && response.data.checkout_url) {
-        // Check if we can open the URL
-        const canOpen = await Linking.canOpenURL(response.data.checkout_url);
-        
-        if (canOpen) {
-          // Open WooCommerce checkout page in browser
-          await Linking.openURL(response.data.checkout_url);
-          
-          // Show success message
-          Alert.alert(
-            'Uspeh', 
-            'Rezervacija je dodata u korpu. Nastavljamo ka plaćanju...',
-            [
-              {
-                text: 'U redu',
-                onPress: () => {
-                  // Optionally navigate back or to a confirmation screen
-                  // navigation.goBack();
-                }
-              }
-            ]
-          );
-        } else {
-          throw new Error('Ne mogu da otvorim checkout stranicu');
-        }
+        // Navigiraj na Payment screen sa checkout URL-om
+        navigation.navigate('Payment', {
+          checkoutUrl: response.data.checkout_url,
+          orderId: response.data.order_id || null,
+          bookingData: {
+            bus: {
+              from: bus.from,
+              to: bus.to,
+              name: bus.name
+            },
+            ticketCount,
+            totalPrice: bus.price * ticketCount
+          }
+        });
       } else {
         throw new Error(response.message || 'Greška pri kreiranju rezervacije');
       }
@@ -206,7 +196,83 @@ const TicketDetailsScreen = ({ route, navigation }) => {
       setIsProcessing(false);
     }
   };
+  const debugCartContents = async () => {
+    try {
+      console.log('\n=== CART DEBUG START ===');
+      
+      // Pripremi podatke
+      const bookingData = {
+        bus,
+        searchData,
+        ticketCount,
+        passengers,
+        returnDate: isInternationalRoute ? returnDate : null,
+        totalPrice: bus.price * ticketCount
+      };
 
+      console.log('1. Booking Data:', JSON.stringify(bookingData, null, 2));
+
+      // Pošalji zahtev
+      const response = await addToCart(bookingData);
+      console.log('2. API Response:', response);
+
+      if (response.success) {
+        // Proveri šta je u korpi
+        const cartCheckUrl = `${WORDPRESS_URL}/wp-json/wc/store/cart`;
+        
+        try {
+          const cartResponse = await fetch(cartCheckUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            }
+          });
+          
+          const cartData = await cartResponse.json();
+          console.log('3. Cart Contents:', cartData);
+          
+          Alert.alert(
+            'Debug Info',
+            `✓ Added to cart!\n\n` +
+            `Cart Key: ${response.data.cart_key}\n` +
+            `Cart Total: ${response.data.cart_total}\n` +
+            `Cart Items: ${response.data.cart_count || cartData.items?.length || 0}\n\n` +
+            `Checkout URL:\n${response.data.checkout_url}`,
+            [
+              { 
+                text: 'View in Browser',
+                onPress: () => Linking.openURL(response.data.checkout_url)
+              },
+              { text: 'OK' }
+            ]
+          );
+        } catch (cartError) {
+          console.log('Cart check error:', cartError);
+          
+          // Samo otvori checkout i vidi šta se desilo
+          Alert.alert(
+            'Dodato u korpu',
+            'Karta je dodata. Proverite korpu.',
+            [
+              { 
+                text: 'Open Checkout',
+                onPress: () => Linking.openURL(response.data.checkout_url)
+              }
+            ]
+          );
+        }
+      } else {
+        console.log('✗ Failed:', response.message);
+        Alert.alert('Greška', response.message);
+      }
+
+      console.log('=== CART DEBUG END ===\n');
+
+    } catch (error) {
+      console.error('Debug error:', error);
+      Alert.alert('Debug Error', error.message);
+    }
+  };
   const totalPrice = bus.price * ticketCount;
 
   return (
@@ -457,7 +523,7 @@ const TicketDetailsScreen = ({ route, navigation }) => {
               <DateTimePicker
                 value={tempReturnDate}
                 mode="date"
-                display="spinner"
+                display="inline"
                 onChange={onReturnDateChange}
                 minimumDate={new Date(searchData.departureDate)}
                 style={styles.datePicker}
@@ -829,7 +895,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   datePicker: {
-    height: 200,
+    height: 350,
     marginVertical: 20,
   },
 });

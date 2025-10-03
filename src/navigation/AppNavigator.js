@@ -10,6 +10,8 @@ import SearchResultsScreen from '../screens/SearchResultsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import TicketDetailsScreen from '../screens/TicketDetailsScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+import ApiTestScreen from '../screens/ApiTestScreen';
 
 
 const Tab = createBottomTabNavigator();
@@ -46,6 +48,22 @@ function HomeStack() {
         component={TicketDetailsScreen}
         options={{
           title: 'Detalji karte',
+          headerBackTitle: '',
+        }}
+      />
+      <Stack.Screen 
+        name="Payment" 
+        component={PaymentScreen}
+        options={{
+          headerShown: false, // Jer PaymentScreen ima svoj header
+          presentation: 'modal' // iOS stil modal prezentacija
+        }}
+      />
+      <Stack.Screen 
+        name="ApiTest" 
+        component={ApiTestScreen}
+        options={{
+          title: 'API Test',
           headerBackTitle: '',
         }}
       />
