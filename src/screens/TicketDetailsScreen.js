@@ -144,7 +144,39 @@ const TicketDetailsScreen = ({ route, navigation }) => {
 
     return true;
   };
+  const handleCheckout = async () => {
+  if (isProcessing) return;
+  setIsProcessing(true);
 
+  try {
+    const bookingData = {
+      bus,
+      searchData,
+      ticketCount,
+      passengers,
+      returnDate: isInternationalRoute ? returnDate : null,
+      totalPrice: bus.price * ticketCount
+    };
+
+    const response = await addToCart(bookingData);
+
+    if (response.success) {
+      // DODAJ cart_key u URL
+      const checkoutUrlWithCart = `${response.data.checkout_url}?cart_key=${response.data.cart_key}`;
+      
+      navigation.navigate('Payment', {
+        checkoutUrl: checkoutUrlWithCart, // <-- Koristi URL sa cart_key
+        orderId: response.data.order_id,
+        bookingData
+      });
+    }
+  } catch (error) {
+    console.error('Checkout error:', error);
+    Alert.alert('Greška', 'Došlo je do greške pri checkout-u.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
   const handleProceedToPayment = async () => {
     if (!validateForm()) {
       return;

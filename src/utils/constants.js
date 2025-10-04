@@ -18,6 +18,9 @@ export const API_CONFIG = {
     SEARCH: '/balbuss/v1/lines/search',
     CITIES: '/balbuss/v1/cities',
     BOOKINGS: '/balbuss/v1/bookings',
+    AUTH: '/jwt-auth/v1/token',
+    REGISTER: '/balbuss/v1/users/register',
+    USERS: '/balbuss/v1/users',
     
     // WooCommerce endpoints (ako koristite WooCommerce REST API)
     WC_CART: '/wc/store/cart',
@@ -83,6 +86,7 @@ export const BUS_AMENITIES = {
 export const PAYMENT_METHODS = {
   CARD: { id: 'card', name: 'Kreditna/Debitna kartica', icon: 'card' },
   PAYPAL: { id: 'paypal', name: 'PayPal', icon: 'logo-paypal' },
+  COD: { id: 'cod', name: 'Plaćanje pouzećem', icon: 'cash-outline', privileged: true }, // samo za privilegovane korisnike
   CASH: { id: 'cash', name: 'Gotovina', icon: 'cash' }
 };
 

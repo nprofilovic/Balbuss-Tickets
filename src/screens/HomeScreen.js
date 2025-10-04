@@ -31,6 +31,7 @@ const HomeScreen = ({ navigation }) => {
   const [availableCities, setAvailableCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingCities, setLoadingCities] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Search form state
   const [fromCity, setFromCity] = useState(null);
