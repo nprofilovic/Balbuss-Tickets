@@ -9,7 +9,6 @@ import {
   Alert,
   Platform,
   Modal,
-  Linking,
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -138,52 +137,17 @@ const TicketDetailsScreen = ({ route, navigation }) => {
         Alert.alert('Greška', `Unesite telefon za putnika ${i + 1}`);
         return false;
       }
-      
-      // Pasoš više nije obavezan
     }
 
     return true;
   };
-  const handleCheckout = async () => {
-  if (isProcessing) return;
-  setIsProcessing(true);
 
-  try {
-    const bookingData = {
-      bus,
-      searchData,
-      ticketCount,
-      passengers,
-      returnDate: isInternationalRoute ? returnDate : null,
-      totalPrice: bus.price * ticketCount
-    };
-
-    const response = await addToCart(bookingData);
-
-    if (response.success) {
-      // DODAJ cart_key u URL
-      const checkoutUrlWithCart = `${response.data.checkout_url}?cart_key=${response.data.cart_key}`;
-      
-      navigation.navigate('Payment', {
-        checkoutUrl: checkoutUrlWithCart, // <-- Koristi URL sa cart_key
-        orderId: response.data.order_id,
-        bookingData
-      });
-    }
-  } catch (error) {
-    console.error('Checkout error:', error);
-    Alert.alert('Greška', 'Došlo je do greške pri checkout-u.');
-  } finally {
-    setIsProcessing(false);
-  }
-};
   const handleProceedToPayment = async () => {
     if (!validateForm()) {
       return;
     }
 
-    setIsProcessing(true);
-
+    // NE kreiraj order ovde - samo prosleđuj podatke na BookingScreen
     const bookingData = {
       bus,
       searchData,
@@ -193,118 +157,14 @@ const TicketDetailsScreen = ({ route, navigation }) => {
       totalPrice: bus.price * ticketCount
     };
 
-    try {
-      console.log('Sending booking data:', bookingData);
-      
-      // Add booking to WooCommerce cart
-      const response = await addToCart(bookingData);
+    console.log('Proceeding to Booking screen with data:', bookingData);
 
-      if (response.success && response.data.checkout_url) {
-        // Navigiraj na Payment screen sa checkout URL-om
-        navigation.navigate('Payment', {
-          checkoutUrl: response.data.checkout_url,
-          orderId: response.data.order_id || null,
-          bookingData: {
-            bus: {
-              from: bus.from,
-              to: bus.to,
-              name: bus.name
-            },
-            ticketCount,
-            totalPrice: bus.price * ticketCount
-          }
-        });
-      } else {
-        throw new Error(response.message || 'Greška pri kreiranju rezervacije');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      Alert.alert(
-        'Greška',
-        error.message || 'Došlo je do greške. Molimo pokušajte ponovo.',
-        [{ text: 'U redu' }]
-      );
-    } finally {
-      setIsProcessing(false);
-    }
+    // Direktno navigiraj na BookingScreen BEZ kreiranja ordera
+    navigation.navigate('Booking', {
+      bookingData: bookingData
+    });
   };
-  const debugCartContents = async () => {
-    try {
-      console.log('\n=== CART DEBUG START ===');
-      
-      // Pripremi podatke
-      const bookingData = {
-        bus,
-        searchData,
-        ticketCount,
-        passengers,
-        returnDate: isInternationalRoute ? returnDate : null,
-        totalPrice: bus.price * ticketCount
-      };
 
-      console.log('1. Booking Data:', JSON.stringify(bookingData, null, 2));
-
-      // Pošalji zahtev
-      const response = await addToCart(bookingData);
-      console.log('2. API Response:', response);
-
-      if (response.success) {
-        // Proveri šta je u korpi
-        const cartCheckUrl = `${WORDPRESS_URL}/wp-json/wc/store/cart`;
-        
-        try {
-          const cartResponse = await fetch(cartCheckUrl, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-            }
-          });
-          
-          const cartData = await cartResponse.json();
-          console.log('3. Cart Contents:', cartData);
-          
-          Alert.alert(
-            'Debug Info',
-            `✓ Added to cart!\n\n` +
-            `Cart Key: ${response.data.cart_key}\n` +
-            `Cart Total: ${response.data.cart_total}\n` +
-            `Cart Items: ${response.data.cart_count || cartData.items?.length || 0}\n\n` +
-            `Checkout URL:\n${response.data.checkout_url}`,
-            [
-              { 
-                text: 'View in Browser',
-                onPress: () => Linking.openURL(response.data.checkout_url)
-              },
-              { text: 'OK' }
-            ]
-          );
-        } catch (cartError) {
-          console.log('Cart check error:', cartError);
-          
-          // Samo otvori checkout i vidi šta se desilo
-          Alert.alert(
-            'Dodato u korpu',
-            'Karta je dodata. Proverite korpu.',
-            [
-              { 
-                text: 'Open Checkout',
-                onPress: () => Linking.openURL(response.data.checkout_url)
-              }
-            ]
-          );
-        }
-      } else {
-        console.log('✗ Failed:', response.message);
-        Alert.alert('Greška', response.message);
-      }
-
-      console.log('=== CART DEBUG END ===\n');
-
-    } catch (error) {
-      console.error('Debug error:', error);
-      Alert.alert('Debug Error', error.message);
-    }
-  };
   const totalPrice = bus.price * ticketCount;
 
   return (

@@ -11,7 +11,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import TicketDetailsScreen from '../screens/TicketDetailsScreen';
 import PaymentScreen from '../screens/PaymentScreen';
-import ApiTestScreen from '../screens/ApiTestScreen';
+import BookingScreen from '../screens/BookingScreen';
 
 
 const Tab = createBottomTabNavigator();
@@ -59,14 +59,12 @@ function HomeStack() {
           presentation: 'modal' // iOS stil modal prezentacija
         }}
       />
-      <Stack.Screen 
-        name="ApiTest" 
-        component={ApiTestScreen}
-        options={{
-          title: 'API Test',
-          headerBackTitle: '',
-        }}
+     <Stack.Screen 
+        name="Booking" 
+        component={BookingScreen}
+        options={{ title: 'Pregled rezervacije' }}
       />
+      
     </Stack.Navigator>
   );
 }
