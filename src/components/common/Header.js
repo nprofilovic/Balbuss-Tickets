@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { SvgUri } from 'react-native-svg';
 import { colors } from '../../styles/colors';
 
 const Header = ({
@@ -15,6 +16,7 @@ const Header = ({
   showBack = false,
   showMenu = false,
   showProfile = false,
+  showLogo = true, // Novo: opcija za prikazivanje logotipa
   onBackPress,
   onMenuPress,
   onProfilePress,
@@ -44,9 +46,17 @@ const Header = ({
             )}
           </View>
 
-          {/* Center - Title */}
+          {/* Center - Logo ili Title */}
           <View style={styles.centerContainer}>
-            <Text style={[styles.title, { color: textColor }]}>{title}</Text>
+            {showLogo ? (
+              <Image 
+                source={{ uri: 'https://balbuss.rs/wp-content/uploads/2025/07/Beli@Balbuss.png' }}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={[styles.title, { color: textColor }]}>{title}</Text>
+            )}
           </View>
 
           {/* Right Side */}
@@ -85,6 +95,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 2,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   rightContainer: {
     flexDirection: 'row',
@@ -101,6 +112,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textWhite,
     textAlign: 'center',
+  },
+  logo: {
+    width: 150,
+    height: 40,
   },
 });
 
