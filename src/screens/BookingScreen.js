@@ -196,7 +196,8 @@ const BookingScreen = ({ route, navigation }) => {
           phone: p.phone,
           email: p.email || email,
           passport: p.passport || '',
-          description: p.description || ''
+          description: p.description || '',
+          return_date: bookingData.returnDate ? bookingData.returnDate.toISOString().split('T')[0] : null 
         })),
         ticket_count: bookingData.ticketCount,
         total_price: bookingData.totalPrice,
