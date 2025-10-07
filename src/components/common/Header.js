@@ -50,7 +50,7 @@ const Header = ({
           <View style={styles.centerContainer}>
             {showLogo ? (
               <Image 
-                source={{ uri: 'https://balbuss.rs/wp-content/uploads/2025/07/Beli@Balbuss.png' }}
+                source={require('../../assets/images/balbuss-beli.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
