@@ -350,24 +350,39 @@ export const isDateAvailable = (date, availableDatesData) => {
 // Get unique cities from all lines
 export const getCities = async () => {
   try {
+    console.log('=== getCities called ===');
     const linesResponse = await getAllLines();
     
+    console.log('Lines response in getCities:', linesResponse);
+    
     if (!linesResponse.success) {
+      console.error('getCities: Lines response not successful');
       throw new Error('Failed to fetch lines');
     }
+    
+    console.log('Total lines for cities extraction:', linesResponse.data.length);
     
     const citiesSet = new Set();
     
     linesResponse.data.forEach(line => {
+      console.log(`Processing line: ${line.name}`);
+      console.log('Boarding points:', line.boardingPoints.map(p => p.name));
+      console.log('Dropping points:', line.droppingPoints.map(p => p.name));
+      
       line.boardingPoints.forEach(point => citiesSet.add(point.name));
       line.droppingPoints.forEach(point => citiesSet.add(point.name));
     });
+    
+    console.log('Unique cities found:', Array.from(citiesSet));
     
     const cities = Array.from(citiesSet).map((city, index) => ({
       id: index + 1,
       name: city,
       code: city.substring(0, 3).toUpperCase()
     }));
+    
+    console.log('Final cities array:', cities);
+    console.log('Total cities count:', cities.length);
     
     return {
       success: true,
@@ -403,20 +418,22 @@ export const searchBuses = async (searchParams) => {
     let filteredLines = linesResponse.data;
     console.log('Total lines from API:', filteredLines.length);
     
-    // Filter by from location
+    // Filter by from location (use city name, not ID)
     if (from) {
       filteredLines = filteredLines.filter(line => 
         line.boardingPoints.some(point => 
+          point.name.toLowerCase() === from.toLowerCase() ||
           point.name.toLowerCase().includes(from.toLowerCase())
         )
       );
       console.log(`After FROM filter (${from}):`, filteredLines.length);
     }
     
-    // Filter by to location
+    // Filter by to location (use city name, not ID)
     if (to) {
       filteredLines = filteredLines.filter(line =>
         line.droppingPoints.some(point =>
+          point.name.toLowerCase() === to.toLowerCase() ||
           point.name.toLowerCase().includes(to.toLowerCase())
         )
       );
@@ -562,8 +579,11 @@ export const getPopularRoutes = async () => {
         const duration = calculateDuration(firstBoarding.time, lastDropping.time);
         
         routeMap.set(routeKey, {
+          id: line.id,
           from: firstBoarding.name,
           to: lastDropping.name,
+          from_id: firstBoarding.id || line.id,
+          to_id: lastDropping.id || line.id + 1000,
           price: price,
           duration: duration,
           popularity: 90
@@ -585,8 +605,8 @@ export const getPopularRoutes = async () => {
     return {
       success: true,
       data: [
-        { from: 'Novi Sad', to: 'Istanbul', price: 6000, duration: '14h', popularity: 95 },
-        { from: 'Beograd', to: 'Istanbul', price: 6000, duration: '14h', popularity: 90 }
+        { id: 1, from: 'Novi Sad', to: 'Istanbul', from_id: 1, to_id: 2, price: 6000, duration: '14h', popularity: 95 },
+        { id: 2, from: 'Beograd', to: 'Istanbul', from_id: 3, to_id: 2, price: 6000, duration: '14h', popularity: 90 }
       ],
       fallback: true
     };
@@ -645,6 +665,44 @@ export const getBusDetails = async (busId) => {
   }
 };
 
+/**
+ * Get App Content (Banners, Featured Routes, Announcements)
+ * @returns {Promise<Object>}
+ */
+export const getAppContent = async () => {
+  try {
+    console.log('Fetching app content...');
+    const response = await apiClient.get('/app-content');
+
+    console.log('App content response:', response.data);
+
+    if (response.data && response.data.success) {
+      return {
+        banners: response.data.data.banners || [],
+        featured_routes: response.data.data.featured_routes || [],
+        announcements: response.data.data.announcements || []
+      };
+    }
+    
+    // Ako API ne vrati success, vrati prazne nizove
+    console.log('App content API returned no success, returning empty arrays');
+    return {
+      banners: [],
+      featured_routes: [],
+      announcements: []
+    };
+    
+  } catch (error) {
+    console.error('Error fetching app content:', error);
+    // Ne crashuj app, samo vrati prazne nizove
+    return {
+      banners: [],
+      featured_routes: [],
+      announcements: []
+    };
+  }
+};
+
 export default {
   getAllLines,
   searchBuses,
@@ -654,5 +712,6 @@ export default {
   getAvailableDestinations,
   getAvailableOrigins,
   getAvailableDates,
-  isDateAvailable
+  isDateAvailable,
+  getAppContent
 };

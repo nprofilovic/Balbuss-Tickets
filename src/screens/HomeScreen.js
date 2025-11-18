@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors } from '../styles/colors';
+import BannerSlider from '../components/BannerSlider';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 import { 
   getPopularRoutes, 
   searchBuses, 
@@ -22,7 +24,8 @@ import {
   getAvailableDestinations,
   getAvailableOrigins,
   getAvailableDates,
-  isDateAvailable
+  isDateAvailable,
+  getAppContent
 } from '../services/api';
 
 const HomeScreen = ({ navigation }) => {
@@ -32,6 +35,13 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [loadingCities, setLoadingCities] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // App Content State (NEW)
+  const [appContent, setAppContent] = useState({
+    banners: [],
+    featured_routes: [],
+    announcements: []
+  });
   
   // Search form state
   const [fromCity, setFromCity] = useState(null);
@@ -71,7 +81,8 @@ const HomeScreen = ({ navigation }) => {
   const loadInitialData = async () => {
     await Promise.all([
       loadAllCities(),
-      loadPopularRoutes()
+      loadPopularRoutes(),
+      loadAppContent() // NEW
     ]);
   };
 
@@ -83,7 +94,7 @@ const HomeScreen = ({ navigation }) => {
       
       if (response.success && Array.isArray(response.data)) {
         setAllCities(response.data);
-        setAvailableCities(response.data); // Initially all cities are available
+        setAvailableCities(response.data);
         console.log('Cities loaded:', response.data.length, 'cities');
       } else {
         console.log('Failed to load cities, using fallback');
@@ -118,7 +129,6 @@ const HomeScreen = ({ navigation }) => {
         setAvailableDatesData(response.data);
         console.log('Available dates loaded:', response.data);
         
-        // Show info about allowed days
         if (response.data.allowedDays.length < 7) {
           const dayNames = ['Nedelja', 'Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota'];
           const allowedDayNames = response.data.allowedDays.map(day => dayNames[day]).join(', ');
@@ -144,13 +154,61 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  // NEW: Load App Content
+  const loadAppContent = async () => {
+    try {
+      console.log('Loading app content...');
+      const content = await getAppContent();
+      
+      if (content && typeof content === 'object') {
+        setAppContent({
+          banners: Array.isArray(content.banners) ? content.banners : [],
+          featured_routes: Array.isArray(content.featured_routes) ? content.featured_routes : [],
+          announcements: Array.isArray(content.announcements) ? content.announcements : []
+        });
+        console.log('App content loaded:', {
+          banners: content.banners?.length || 0,
+          featured: content.featured_routes?.length || 0,
+          announcements: content.announcements?.length || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading app content:', error);
+    }
+  };
+
+  // NEW: Handle banner press
+  const handleBannerPress = (banner) => {
+    if (banner.link_type === 'line' && banner.link_value) {
+      Alert.alert('Linija', `Otvaranje linije #${banner.link_value}`);
+    } else if (banner.link_type === 'url' && banner.link_value) {
+      Alert.alert('Link', banner.link_value);
+    }
+  };
+
+  // NEW: Get featured badge for route
+  const getFeaturedBadge = (lineId) => {
+    if (!appContent.featured_routes || appContent.featured_routes.length === 0) {
+      return null;
+    }
+    
+    const featured = appContent.featured_routes.find(
+      f => parseInt(f.line_id) === parseInt(lineId)
+    );
+    
+    return featured ? {
+      text: featured.badge_text,
+      color: featured.badge_color,
+      discount: featured.discount_percentage
+    } : null;
+  };
+
   const handleSearch = async () => {
     if (!fromCity || !toCity) {
       Alert.alert('Greška', 'Molimo izaberite polazište i odredište');
       return;
     }
 
-    // Check if selected date is available
     if (!isDateAvailable(departureDate, availableDatesData)) {
       const dayNames = ['Nedelja', 'Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota'];
       const allowedDayNames = availableDatesData.allowedDays.map(day => dayNames[day]).join(', ');
@@ -172,9 +230,7 @@ const HomeScreen = ({ navigation }) => {
       };
       
       console.log('Searching with data:', searchData);
-      
       const response = await searchBuses(searchData);
-      
       console.log('Search response received:', response);
       
       if (response.success) {
@@ -227,7 +283,6 @@ const HomeScreen = ({ navigation }) => {
     setFromModalVisible(false);
     setSearchQuery('');
     
-    // Load available destinations for this origin
     try {
       const response = await getAvailableDestinations(city.name);
       console.log('Available destinations response:', response);
@@ -244,7 +299,6 @@ const HomeScreen = ({ navigation }) => {
       setAvailableCities(allCities);
     }
     
-    // If toCity is already selected, load available dates
     if (toCity) {
       await loadAvailableDates();
     }
@@ -255,7 +309,6 @@ const HomeScreen = ({ navigation }) => {
     setToModalVisible(false);
     setSearchQuery('');
     
-    // If fromCity is selected, load available dates
     if (fromCity) {
       await loadAvailableDates();
     }
@@ -266,7 +319,6 @@ const HomeScreen = ({ navigation }) => {
     setFromCity(toCity);
     setToCity(temp);
     
-    // Reload available cities and dates
     if (toCity) {
       getAvailableDestinations(toCity.name).then(response => {
         if (response.success) {
@@ -277,9 +329,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const openFromModal = () => {
-    // Reset search query
     setSearchQuery('');
-    // Show all cities when selecting from
     setAvailableCities(allCities);
     setFromModalVisible(true);
   };
@@ -287,7 +337,6 @@ const HomeScreen = ({ navigation }) => {
   const openToModal = async () => {
     console.log('Opening TO modal, fromCity:', fromCity?.name);
     
-    // Filter cities based on selected fromCity
     if (fromCity) {
       try {
         setLoadingCities(true);
@@ -309,7 +358,6 @@ const HomeScreen = ({ navigation }) => {
         setLoadingCities(false);
       }
     } else {
-      // No fromCity selected, show all cities
       setAvailableCities(allCities);
       setToModalVisible(true);
     }
@@ -325,7 +373,6 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const confirmDate = () => {
-    // Check if date is available
     if (!isDateAvailable(tempDate.toISOString().split('T')[0], availableDatesData)) {
       const dayNames = ['Nedelja', 'Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota'];
       const allowedDayNames = availableDatesData.allowedDays.map(day => dayNames[day]).join(', ');
@@ -370,46 +417,25 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const getFilteredCities = (excludeCity = null) => {
-    console.log('getFilteredCities called:', {
-      availableCitiesCount: availableCities.length,
-      availableCities: availableCities.map(c => `${c.name} (ID: ${c.id})`),
-      excludeCity: excludeCity ? `${excludeCity.name} (ID: ${excludeCity.id})` : 'none',
-      searchQuery
-    });
-    
     let filtered = availableCities;
     
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(city =>
         city.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      console.log('After search filter:', filtered.map(c => c.name));
     }
     
-    // Exclude selected city by NAME instead of ID
     if (excludeCity) {
-      const beforeExclude = filtered.length;
       filtered = filtered.filter(city => 
         city.name.toLowerCase() !== excludeCity.name.toLowerCase()
       );
-      console.log(`After exclude filter: ${beforeExclude} -> ${filtered.length}`, filtered.map(c => c.name));
     }
     
-    console.log('Final filtered cities:', filtered.map(c => c.name));
     return filtered;
   };
 
   const renderCityModal = (visible, onClose, onSelect, excludeCity = null, isFrom = true) => {
     const filteredCities = getFilteredCities(excludeCity);
-    
-    console.log('Rendering city modal:', { 
-      visible, 
-      isFrom, 
-      filteredCitiesCount: filteredCities.length,
-      availableCitiesCount: availableCities.length,
-      loadingCities 
-    });
     
     return (
       <Modal
@@ -488,7 +514,6 @@ const HomeScreen = ({ navigation }) => {
       return null;
     }
 
-    // Get day name helper
     const getDayName = (date) => {
       const dayNames = ['Nedelja', 'Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota'];
       return dayNames[date.getDay()];
@@ -575,6 +600,19 @@ const HomeScreen = ({ navigation }) => {
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Announcements Banner - NEW */}
+        {appContent.announcements.length > 0 && (
+          <AnnouncementBanner announcements={appContent.announcements} />
+        )}
+
+        {/* Banner Slider - NEW */}
+        {appContent.banners.length > 0 && (
+          <BannerSlider 
+            banners={appContent.banners} 
+            onBannerPress={handleBannerPress}
+          />
+        )}
+        
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeTitle}>Gde želite da putujete?</Text>
           <Text style={styles.welcomeSubtitle}>Pronađite najbolje cene za vaš put</Text>
@@ -583,7 +621,6 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.searchContainer}>
           <View style={styles.searchForm}>
             <View style={styles.searchInputs}>
-              {/* From City */}
               <TouchableOpacity 
                 style={styles.searchInputField}
                 onPress={openFromModal}
@@ -595,7 +632,6 @@ const HomeScreen = ({ navigation }) => {
                 <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
               
-              {/* To City */}
               <TouchableOpacity 
                 style={styles.searchInputField}
                 onPress={openToModal}
@@ -607,7 +643,6 @@ const HomeScreen = ({ navigation }) => {
                 <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
               
-              {/* Date Picker */}
               <TouchableOpacity 
                 style={styles.searchInputField}
                 onPress={openDatePicker}
@@ -648,27 +683,57 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Popular Routes */}
+        {/* Popular Routes with Featured Badges - UPDATED */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Popularne rute</Text>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {popularRoutes && popularRoutes.length > 0 ? (
-              popularRoutes.map((route, index) => (
-                <TouchableOpacity 
-                  key={index}
-                  style={styles.routeCard}
-                  onPress={() => handleQuickRoute(route.from, route.to)}
-                  disabled={loading}
-                >
-                  <View style={styles.routeHeader}>
-                    <Text style={styles.routeText}>{route.from} → {route.to}</Text>
-                    <Ionicons name="bus" size={16} color={colors.primary} />
-                  </View>
-                  <Text style={styles.routePrice}>{route.price} RSD</Text>
-                  <Text style={styles.routeDuration}>{route.duration}</Text>
-                </TouchableOpacity>
-              ))
+              popularRoutes.map((route, index) => {
+                const featuredBadge = getFeaturedBadge(route.id);
+                
+                return (
+                  <TouchableOpacity 
+                    key={index}
+                    style={styles.routeCard}
+                    onPress={() => handleQuickRoute(route.from, route.to)}
+                    disabled={loading}
+                  >
+                    {/* Featured Badge - NEW */}
+                    {featuredBadge && (
+                      <View 
+                        style={[
+                          styles.featuredBadge, 
+                          { backgroundColor: featuredBadge.color }
+                        ]}
+                      >
+                        <Text style={styles.featuredBadgeText}>
+                          {featuredBadge.text}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    <View style={styles.routeHeader}>
+                      <Text style={styles.routeText}>{route.from} → {route.to}</Text>
+                      <Ionicons name="bus" size={16} color={colors.primary} />
+                    </View>
+                    
+                    {/* Price with discount - NEW */}
+                    {featuredBadge && featuredBadge.discount > 0 ? (
+                      <View>
+                        <Text style={styles.routePriceOld}>{route.price} RSD</Text>
+                        <Text style={styles.routePrice}>
+                          {Math.round(route.price * (1 - featuredBadge.discount / 100))} RSD
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.routePrice}>{route.price} RSD</Text>
+                    )}
+                    
+                    <Text style={styles.routeDuration}>{route.duration}</Text>
+                  </TouchableOpacity>
+                );
+              })
             ) : (
               <View style={styles.emptyRoutesContainer}>
                 <Text style={styles.emptyRoutesText}>Učitavanje ruta...</Text>
@@ -708,7 +773,7 @@ const HomeScreen = ({ navigation }) => {
         setSearchQuery('');
       }, selectToCity, fromCity, false)}
       
-      {/* Date Picker Modal (iOS) or Native (Android) */}
+      {/* Date Picker Modal */}
       {Platform.OS === 'ios' ? (
         renderDatePickerModal()
       ) : (
