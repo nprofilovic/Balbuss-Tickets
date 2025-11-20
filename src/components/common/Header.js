@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  StatusBar
+  StatusBar,
+  Image  // ✅ DODAJ OVO
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { SvgUri } from 'react-native-svg';
 import { colors } from '../../styles/colors';
 
 const Header = ({
@@ -16,7 +16,7 @@ const Header = ({
   showBack = false,
   showMenu = false,
   showProfile = false,
-  showLogo = true, // Novo: opcija za prikazivanje logotipa
+  showLogo = true,
   onBackPress,
   onMenuPress,
   onProfilePress,
@@ -24,7 +24,6 @@ const Header = ({
   textColor = colors.textWhite,
   rightComponent,
   style
-  
 }) => {
   return (
     <>
@@ -53,6 +52,7 @@ const Header = ({
                 source={require('../../assets/images/balbuss-beli.png')}
                 style={styles.logo}
                 resizeMode="contain"
+                onError={(e) => console.log('Error loading logo:', e.nativeEvent.error)}
               />
             ) : (
               <Text style={[styles.title, { color: textColor }]}>{title}</Text>

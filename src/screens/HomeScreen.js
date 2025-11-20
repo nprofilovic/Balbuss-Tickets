@@ -17,6 +17,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors } from '../styles/colors';
 import BannerSlider from '../components/BannerSlider';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import ImprovedDatePicker from '../components/ImprovedDatePicker';
+import Header from '../components/common/Header';
 import { 
   getPopularRoutes, 
   searchBuses, 
@@ -510,76 +512,18 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const renderDatePickerModal = () => {
-    if (Platform.OS === 'android') {
-      return null;
-    }
-
-    const getDayName = (date) => {
-      const dayNames = ['Nedelja', 'Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota'];
-      return dayNames[date.getDay()];
-    };
-
-    const isCurrentDateAvailable = isDateAvailable(
-      tempDate.toISOString().split('T')[0], 
-      availableDatesData
-    );
-
     return (
-      <Modal
+      <ImprovedDatePicker
         visible={dateModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setDateModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.dateModalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setDateModalVisible(false)}>
-                <Text style={styles.cancelButton}>Otkaži</Text>
-              </TouchableOpacity>
-              <View style={styles.datePickerHeaderCenter}>
-                <Text style={styles.modalTitle}>Izaberite datum</Text>
-                <Text style={[
-                  styles.dateAvailability,
-                  isCurrentDateAvailable ? styles.dateAvailable : styles.dateUnavailable
-                ]}>
-                  {getDayName(tempDate)} - {isCurrentDateAvailable ? 'Dostupno' : 'Nije dostupno'}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={confirmDate} disabled={!isCurrentDateAvailable}>
-                <Text style={[
-                  styles.confirmButton,
-                  !isCurrentDateAvailable && styles.confirmButtonDisabled
-                ]}>
-                  Potvrdi
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            {availableDatesData.allowedDays.length < 7 && (
-              <View style={styles.dateInfoBanner}>
-                <Ionicons name="information-circle" size={20} color={colors.primary} />
-                <Text style={styles.dateInfoText}>
-                  Polasci: {availableDatesData.allowedDays.map(day => 
-                    ['Ned', 'Pon', 'Uto', 'Sre', 'Čet', 'Pet', 'Sub'][day]
-                  ).join(', ')}
-                </Text>
-              </View>
-            )}
-            
-            <DateTimePicker
-              value={tempDate}
-              mode="date"
-              display="inline"
-              onChange={onDateChange}
-              minimumDate={new Date()}
-              style={styles.datePicker}
-              locale="sr-Latn-RS"
-              textColor={colors.textPrimary}
-            />
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setDateModalVisible(false)}
+        onSelect={(date) => {
+          setDepartureDate(date);
+          setDateModalVisible(false);
+        }}
+        selectedDate={departureDate}
+        minDate={new Date()}
+        availableDatesData={availableDatesData}
+      />
     );
   };
 
@@ -589,15 +533,14 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.iosNotchOverlay} />
       )}
       
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => Alert.alert('Menu', 'Menu funkcionalnost')}>
-          <Ionicons name="menu" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>BalBuss</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Ionicons name="person-circle" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <Header 
+        showLogo={true}
+        showMenu={true}
+        showProfile={true}
+        title="BalBuss"
+        onMenuPress={() => Alert.alert('Menu', 'Menu funkcionalnost')}
+        onProfilePress={() => navigation.navigate('Profile')}
+      />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Announcements Banner - NEW */}

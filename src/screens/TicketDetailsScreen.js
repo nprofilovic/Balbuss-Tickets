@@ -8,13 +8,13 @@ import {
   TextInput,
   Alert,
   Platform,
-  Modal,
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors } from '../styles/colors';
 import { addToCart } from '../services/woocommerceService';
+import ImprovedDatePicker from '../components/ImprovedDatePicker';
+
 
 const TicketDetailsScreen = ({ route, navigation }) => {
   const { bus, searchData } = route.params || {};
@@ -22,7 +22,6 @@ const TicketDetailsScreen = ({ route, navigation }) => {
   const [ticketCount, setTicketCount] = useState(1);
   const [returnDate, setReturnDate] = useState(null);
   const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
-  const [tempReturnDate, setTempReturnDate] = useState(new Date());
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -35,8 +34,8 @@ const TicketDetailsScreen = ({ route, navigation }) => {
     }
   ]);
 
-  const isInternationalRoute = bus.to.toLowerCase().includes('istanbul') || 
-                               bus.from.toLowerCase().includes('istanbul');
+  // Proveri da li je POVRATNA karta (samo povratne karte imaju date picker)
+  const isReturnTicket = bus.name && bus.name.toLowerCase().includes('povratna');
 
   const handleTicketCountChange = (increment) => {
     const newCount = Math.max(1, Math.min(bus.availableSeats, ticketCount + increment));
@@ -72,7 +71,8 @@ const TicketDetailsScreen = ({ route, navigation }) => {
 
   const formatReturnDate = (date) => {
     if (!date) return 'Izaberite datum';
-    return date.toLocaleDateString('sr-Latn-RS', {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('sr-Latn-RS', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -101,26 +101,9 @@ const TicketDetailsScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleReturnDateConfirm = () => {
-    setReturnDate(tempReturnDate);
-    setShowReturnDatePicker(false);
-  };
-
-  const onReturnDateChange = (event, selectedDate) => {
-    if (Platform.OS === 'android') {
-      setShowReturnDatePicker(false);
-      if (selectedDate) {
-        setReturnDate(selectedDate);
-      }
-    } else {
-      if (selectedDate) {
-        setTempReturnDate(selectedDate);
-      }
-    }
-  };
-
   const validateForm = () => {
-    if (isInternationalRoute && !returnDate) {
+    // Provera datuma povratka SAMO za povratne karte
+    if (isReturnTicket && !returnDate) {
       Alert.alert('Greška', 'Molimo izaberite datum povratka');
       return false;
     }
@@ -153,7 +136,7 @@ const TicketDetailsScreen = ({ route, navigation }) => {
       searchData,
       ticketCount,
       passengers,
-      returnDate: isInternationalRoute ? returnDate : null,
+      returnDate: isReturnTicket ? returnDate : null,
       totalPrice: bus.price * ticketCount
     };
 
@@ -163,6 +146,28 @@ const TicketDetailsScreen = ({ route, navigation }) => {
     navigation.navigate('Booking', {
       bookingData: bookingData
     });
+  };
+
+  const renderReturnDatePicker = () => {
+    const returnDatesData = {
+      allowedDays: [2, 5], // Utorak i Petak za povratak iz Istanbula
+      blockedDates: [],
+      dateRanges: []
+    };
+
+    return (
+      <ImprovedDatePicker
+        visible={showReturnDatePicker}
+        onClose={() => setShowReturnDatePicker(false)}
+        onSelect={(date) => {
+          setReturnDate(date);
+          setShowReturnDatePicker(false);
+        }}
+        selectedDate={returnDate}
+        minDate={new Date(searchData.departureDate)}
+        availableDatesData={returnDatesData}
+      />
+    );
   };
 
   const totalPrice = bus.price * ticketCount;
@@ -261,16 +266,13 @@ const TicketDetailsScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* Return Date Picker (for Istanbul) */}
-        {isInternationalRoute && (
+        {/* Return Date Picker (SAMO za povratne karte) */}
+        {isReturnTicket && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Datum povratka</Text>
             <TouchableOpacity
               style={styles.datePickerButton}
-              onPress={() => {
-                setTempReturnDate(returnDate || new Date(searchData.departureDate));
-                setShowReturnDatePicker(true);
-              }}
+              onPress={() => setShowReturnDatePicker(true)}
             >
               <Ionicons name="calendar" size={20} color={colors.primary} />
               <Text style={[styles.datePickerText, returnDate && styles.datePickerTextSelected]}>
@@ -280,7 +282,7 @@ const TicketDetailsScreen = ({ route, navigation }) => {
             </TouchableOpacity>
             
             <Text style={styles.helperText}>
-              * Potrebno je izabrati datum povratka za međunarodne linije
+              * Potrebno je izabrati datum povratka
             </Text>
           </View>
         )}
@@ -319,18 +321,16 @@ const TicketDetailsScreen = ({ route, navigation }) => {
                   />
                 </View>
                 
-                {isInternationalRoute && (
-                  <View style={styles.formField}>
-                    <Text style={styles.fieldLabel}>Broj Pasoša</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Broj pasoša (opciono)"
-                      value={passenger.passport}
-                      onChangeText={(text) => updatePassengerField(index, 'passport', text)}
-                      autoCapitalize="characters"
-                    />
-                  </View>
-                )}
+                <View style={styles.formField}>
+                  <Text style={styles.fieldLabel}>Broj Pasoša</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Broj pasoša (opciono)"
+                    value={passenger.passport}
+                    onChangeText={(text) => updatePassengerField(index, 'passport', text)}
+                    autoCapitalize="characters"
+                  />
+                </View>
               </View>
               
               <View style={styles.formFieldFull}>
@@ -389,52 +389,8 @@ const TicketDetailsScreen = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Date Picker Modal for iOS */}
-      {Platform.OS === 'ios' && showReturnDatePicker && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showReturnDatePicker}
-          onRequestClose={() => setShowReturnDatePicker(false)}
-        >
-          <View style={styles.datePickerModal}>
-            <TouchableOpacity 
-              style={{ flex: 1 }} 
-              onPress={() => setShowReturnDatePicker(false)}
-            />
-            <View style={styles.datePickerModalContent}>
-              <View style={styles.datePickerModalHeader}>
-                <TouchableOpacity onPress={() => setShowReturnDatePicker(false)}>
-                  <Text style={styles.datePickerCancel}>Otkaži</Text>
-                </TouchableOpacity>
-                <Text style={styles.datePickerModalTitle}>Izaberite datum</Text>
-                <TouchableOpacity onPress={handleReturnDateConfirm}>
-                  <Text style={styles.datePickerConfirm}>Potvrdi</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={tempReturnDate}
-                mode="date"
-                display="inline"
-                onChange={onReturnDateChange}
-                minimumDate={new Date(searchData.departureDate)}
-                style={styles.datePicker}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* Date Picker for Android */}
-      {Platform.OS === 'android' && showReturnDatePicker && (
-        <DateTimePicker
-          value={tempReturnDate}
-          mode="date"
-          display="default"
-          onChange={onReturnDateChange}
-          minimumDate={new Date(searchData.departureDate)}
-        />
-      )}
+      {/* Date Picker Modal - NOVI */}
+      {renderReturnDatePicker()}
     </View>
   );
 };
@@ -747,48 +703,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: colors.textWhite,
-  },
-  datePickerModal: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    top: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  datePickerModalContent: {
-    backgroundColor: colors.backgroundCard,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-  },
-  datePickerModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  datePickerModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  datePickerCancel: {
-    fontSize: 16,
-    color: colors.error,
-    fontWeight: '600',
-  },
-  datePickerConfirm: {
-    fontSize: 16,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  datePicker: {
-    height: 350,
-    marginVertical: 20,
   },
 });
 
