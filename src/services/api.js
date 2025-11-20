@@ -265,25 +265,25 @@ export const getAvailableDates = async (fromCity, toCity) => {
     
     const routeKey = `${fromCity.toLowerCase()}-${toCity.toLowerCase()}`;
     let finalAllowedDays = [];
-    
+
     // If no data from API, use hardcoded schedules
     if (allowedDaysSet.size === 0) {
       console.log('No schedule data from API, using hardcoded rules');
       
-      // Routes TO Istanbul (Sreda i Nedelja)
-      if (routeKey === 'novi sad-istanbul' || routeKey === 'novi pazar-istanbul') {
+      // Routes TO Istanbul (Sreda i Nedelja) - BILO KOJA LOKACIJA
+      if (toCity.toLowerCase() === 'istanbul') {
         finalAllowedDays = [0, 3]; // Sunday and Wednesday
         console.log(`Hardcoded schedule for ${routeKey}: Nedelja (Sunday) and Sreda (Wednesday)`);
       } 
-      // Routes FROM Istanbul (Utorak i Petak)
-      else if (routeKey === 'istanbul-novi sad' || routeKey === 'istanbul-novi pazar') {
+      // Routes FROM Istanbul (Utorak i Petak) - KA BILO KOJOJ LOKACIJI
+      else if (fromCity.toLowerCase() === 'istanbul') {
         finalAllowedDays = [2, 5]; // Tuesday and Friday
         console.log(`Hardcoded schedule for ${routeKey}: Utorak (Tuesday) and Petak (Friday)`);
       }
-      // Default: allow all days
+      // All other routes (every day)
       else {
-        finalAllowedDays = [0, 1, 2, 3, 4, 5, 6];
-        console.log(`No specific schedule for ${routeKey}, allowing all days`);
+        finalAllowedDays = [0, 1, 2, 3, 4, 5, 6]; // All days
+        console.log(`Hardcoded schedule for ${routeKey}: Svaki dan (Every day)`);
       }
     } else {
       finalAllowedDays = Array.from(allowedDaysSet);
@@ -350,39 +350,24 @@ export const isDateAvailable = (date, availableDatesData) => {
 // Get unique cities from all lines
 export const getCities = async () => {
   try {
-    console.log('=== getCities called ===');
     const linesResponse = await getAllLines();
     
-    console.log('Lines response in getCities:', linesResponse);
-    
     if (!linesResponse.success) {
-      console.error('getCities: Lines response not successful');
       throw new Error('Failed to fetch lines');
     }
-    
-    console.log('Total lines for cities extraction:', linesResponse.data.length);
     
     const citiesSet = new Set();
     
     linesResponse.data.forEach(line => {
-      console.log(`Processing line: ${line.name}`);
-      console.log('Boarding points:', line.boardingPoints.map(p => p.name));
-      console.log('Dropping points:', line.droppingPoints.map(p => p.name));
-      
       line.boardingPoints.forEach(point => citiesSet.add(point.name));
       line.droppingPoints.forEach(point => citiesSet.add(point.name));
     });
-    
-    console.log('Unique cities found:', Array.from(citiesSet));
     
     const cities = Array.from(citiesSet).map((city, index) => ({
       id: index + 1,
       name: city,
       code: city.substring(0, 3).toUpperCase()
     }));
-    
-    console.log('Final cities array:', cities);
-    console.log('Total cities count:', cities.length);
     
     return {
       success: true,
